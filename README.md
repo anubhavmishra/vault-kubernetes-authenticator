@@ -10,12 +10,6 @@ The `vault-kubernetes-authenticator` is a small application/container that perfo
 
 - `VAULT_ADDR` - the address to the Vault server, including the protocol and port (like `https://my.vault.server:8200`). This defaults to `https://127.0.0.1:8200` if unspecified.
 
-- `VAULT_CAPEM` - the raw PEM contents of the CA file to use for SSL verification.
-
-- `VAULT_CACERT` - the path on disk to a single CA file to use for TSL verification. 
-
-- `VAULT_CAPATH` - the path on disk to a directory of CA files (non-recursive) to use for TLS verification.
-
 - `VAULT_ROLE` - **Required** the name of the Vault role to use for authentication.
 
 - `TOKEN_DEST_PATH` - the destination path on disk to store the token. Usually this is a shared volume. Defaults to `/.vault-token`.
@@ -70,3 +64,9 @@ spec:
 
   # ...
 ```
+
+## Modifications
+
+The original project ([sethvargo/vault-kubernetes-authenticator](https://github.com/sethvargo/vault-kubernetes-authenticator)) has been
+modified to work with Vault clusters without TLS configuration. 
+A makefile has also been added to the project.  

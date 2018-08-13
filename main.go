@@ -16,10 +16,6 @@ import (
 
 var (
 	vaultAddr         string
-	vaultCaPem        string
-	vaultCaCert       string
-	vaultCaPath       string
-	vaultServerName   string
 	vaultK8SMountPath string
 )
 
@@ -28,11 +24,6 @@ func main() {
 	if vaultAddr == "" {
 		vaultAddr = "https://127.0.0.1:8200"
 	}
-
-	vaultCaPem = os.Getenv("VAULT_CAPEM")
-	vaultCaCert = os.Getenv("VAULT_CACERT")
-	vaultCaPath = os.Getenv("VAULT_CAPATH")
-	vaultServerName = os.Getenv("VAULT_TLS_SERVER_NAME")
 
 	vaultK8SMountPath = os.Getenv("VAULT_K8S_MOUNT_PATH")
 	if vaultK8SMountPath == "" {
