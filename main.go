@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,11 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
-	"golang.org/x/net/http2"
 )
 
 var (
@@ -90,32 +86,8 @@ func readJwtToken(path string) (string, error) {
 }
 
 func authenticate(role, jwt string) (string, error) {
-	// Setup the TLS (especially required for custom CAs)
-	rootCAs, err := rootCAs()
-	if err != nil {
-		return "", err
-	}
 
-	tlsClientConfig := &tls.Config{
-		MinVersion: tls.VersionTLS12,
-		RootCAs:    rootCAs,
-	}
-
-	if vaultServerName != "" {
-		tlsClientConfig.ServerName = vaultServerName
-	}
-
-	transport := &http.Transport{
-		TLSClientConfig: tlsClientConfig,
-	}
-
-	if err := http2.ConfigureTransport(transport); err != nil {
-		return "", errors.New("failed to configure http2")
-	}
-
-	client := &http.Client{
-		Transport: transport,
-	}
+	client := &http.Client{}
 
 	addr := vaultAddr + "/v1/auth/" + vaultK8SMountPath + "/login"
 	body := fmt.Sprintf(`{"role": "%s", "jwt": "%s"}`, role, jwt)
@@ -155,78 +127,6 @@ func authenticate(role, jwt string) (string, error) {
 func saveToken(token, dest string) error {
 	if err := ioutil.WriteFile(dest, []byte(token), 0600); err != nil {
 		return errors.Wrap(err, "failed to save token")
-	}
-	return nil
-}
-
-// rootCAs returns the list of trusted root CAs based off the provided
-// configuration. If no CAs were specified, the system roots are used.
-func rootCAs() (*x509.CertPool, error) {
-	switch {
-	case vaultCaPem != "":
-		pool := x509.NewCertPool()
-		if err := loadCert(pool, []byte(vaultCaPem)); err != nil {
-			return nil, err
-		}
-		return pool, nil
-	case vaultCaCert != "":
-		pool := x509.NewCertPool()
-		if err := loadCertFile(pool, vaultCaCert); err != nil {
-			return nil, err
-		}
-		return pool, nil
-	case vaultCaPath != "":
-		pool := x509.NewCertPool()
-		if err := loadCertFolder(pool, vaultCaPath); err != nil {
-			return nil, err
-		}
-		return pool, nil
-	default:
-		pool, err := x509.SystemCertPool()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load system certs")
-		}
-		return pool, err
-	}
-}
-
-// loadCert loads a single pem-encoded certificate into the given pool.
-func loadCert(pool *x509.CertPool, pem []byte) error {
-	if ok := pool.AppendCertsFromPEM(pem); !ok {
-		return fmt.Errorf("failed to parse PEM")
-	}
-	return nil
-}
-
-// loadCertFile loads the certificate at the given path into the given pool.
-func loadCertFile(pool *x509.CertPool, p string) error {
-	pem, err := ioutil.ReadFile(p)
-	if err != nil {
-		return errors.Wrap(err, "failed to read CA file from disk")
-	}
-
-	if err := loadCert(pool, pem); err != nil {
-		return errors.Wrapf(err, "failed to load CA at %s", p)
-	}
-
-	return nil
-}
-
-// loadCertFolder iterates exactly one level below the given directory path and
-// loads all certificates in that path. It does not recurse
-func loadCertFolder(pool *x509.CertPool, p string) error {
-	if err := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		return loadCertFile(pool, path)
-	}); err != nil {
-		return errors.Wrapf(err, "failed to load CAs at %s", p)
 	}
 	return nil
 }
